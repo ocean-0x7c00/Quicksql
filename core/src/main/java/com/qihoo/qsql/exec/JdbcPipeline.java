@@ -44,43 +44,49 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 
 /**
+ * JDBC 获取connection ， statement，执行结果，并将结果打印在控制台中
  * A pipeline special for Jdbc, that can concatenate all the steps in execution, including making
  * connection and statement, fetching result and printing in console.
  */
 public class JdbcPipeline extends AbstractPipeline {
 
+    /**
+     * 定义CSV文件默认的数据库信息
+     */
     public static final String CSV_DEFAULT_SCHEMA = "inline:"
-        + "{\n"
-        + "  version: '1.0',\n"
-        + "  defaultSchema: 'SALES',\n"
-        + "  schemas: [\n"
-        + "    {\n"
-        + "      name: 'SALES',\n"
-        + "      type: 'custom',\n"
-        + "      factory: 'org.apache.calcite.adapter.csv.CsvSchemaFactory',\n"
-        + "      operand: {\n"
-        + "        directory: 'sales'\n"
-        + "      }\n"
-        + "    }\n"
-        + "  ]\n"
-        + "}";
+            + "{\n"
+            + "  version: '1.0',\n"
+            + "  defaultSchema: 'SALES',\n"
+            + "  schemas: [\n"
+            + "    {\n"
+            + "      name: 'SALES',\n"
+            + "      type: 'custom',\n"
+            + "      factory: 'org.apache.calcite.adapter.csv.CsvSchemaFactory',\n"
+            + "      operand: {\n"
+            + "        directory: 'sales'\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
     private static final Logger LOGGER = LoggerFactory.getLogger(JdbcPipeline.class);
+
     private Connection connection;
+
     private Statement statement;
+
     private List<String> tableNames;
 
 
-    public JdbcPipeline(QueryProcedure procedure,
-        List<String> tableNames,
-        SqlRunner.Builder builder) {
+    public JdbcPipeline(QueryProcedure procedure, List<String> tableNames, SqlRunner.Builder builder) {
         super(procedure, builder);
         this.tableNames = tableNames;
     }
 
     /**
+     * 根据数据源JSON信息创建具体的JDBC Connection
      * create Specific Connection based on Data Engine.
      *
-     * @param json json of metadata config
+     * @param json         json of metadata config
      * @param parsedTables List of TableName
      * @return Connection
      */
@@ -106,7 +112,10 @@ public class JdbcPipeline extends AbstractPipeline {
     }
 
     /**
+     * 根据 SchemaAssembler 列表创建具体的JDBC Connection
      * create Specific Connection based on Data Engine.
+     * <p>
+     * TODO SchemaAssembler是什么
      *
      * @param assemblers List of SchemaAssembler
      * @return Connection
@@ -131,7 +140,7 @@ public class JdbcPipeline extends AbstractPipeline {
                 case Elasticsearch:
                     LOGGER.debug("Connection to Elasticsearch server....");
                     return createElasticsearchConnection(
-                        "inline: " + MetadataPostman.assembleSchema(assemblers));
+                            "inline: " + MetadataPostman.assembleSchema(assemblers));
                 case JDBC:
                     LOGGER.debug("Connecting to JDBC server....");
                     return createJdbcConnection(conn);
@@ -143,10 +152,17 @@ public class JdbcPipeline extends AbstractPipeline {
         }
     }
 
+    /**
+     * 根据json配置信息创建es连接
+     *
+     * @param json
+     * @return
+     * @throws SQLException
+     */
     private static Connection createElasticsearchConnection(String json) throws SQLException {
         ConnectionFactory connectionFactory = new MapConnectionFactory(
-            ImmutableMap.of("unquotedCasing", "unchanged", "caseSensitive", "true"),
-            ImmutableList.of()
+                ImmutableMap.of("unquotedCasing", "unchanged", "caseSensitive", "true"),
+                ImmutableList.of()
         ).with("model", json);
 
         Connection connection = connectionFactory.createConnection();
@@ -154,16 +170,23 @@ public class JdbcPipeline extends AbstractPipeline {
         return connection;
     }
 
-    private static Connection createJdbcConnection(Map<String, String> conn)
-        throws ClassNotFoundException, SQLException {
-        if (! conn.containsKey("jdbcDriver")) {
+    /**
+     * 创建JDBC配置信息
+     *
+     * @param conn 数据库连接信息
+     * @return
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     */
+    private static Connection createJdbcConnection(Map<String, String> conn) throws ClassNotFoundException, SQLException {
+        if (!conn.containsKey("jdbcDriver")) {
             throw new RuntimeException("The `jdbcDriver` property needed to be set.");
         }
         Class.forName(conn.get("jdbcDriver"));
         // String ip = conn.getOrDefault("jdbcNode", "");
         // String port = conn.getOrDefault("jdbcPort", "");
         // String db = conn.getOrDefault("dbName", "");
-        if (! conn.containsKey("jdbcUrl")) {
+        if (!conn.containsKey("jdbcUrl")) {
             throw new RuntimeException("The `jdbcUrl` property needed to be set.");
         }
         String url = conn.get("jdbcUrl");
@@ -174,15 +197,29 @@ public class JdbcPipeline extends AbstractPipeline {
         return connection;
     }
 
+    /**
+     * 根据SQL中相邻表的数据引擎信息，判断是否存在跨引擎查询
+     *
+     * @param prev
+     * @param curr
+     */
     private static void checkConnectionInformation(SchemaAssembler prev, SchemaAssembler curr) {
         String message = "Query cross-engine tables should use mixed queries";
         assert prev.getMetadataMapping() == curr.getMetadataMapping() : message;
         assert prev.getConnectionProperties().getOrDefault("jdbcUrl", "")
-            .equals(curr.getConnectionProperties().getOrDefault("jdbcUrl", ""));
+                .equals(curr.getConnectionProperties().getOrDefault("jdbcUrl", ""));
     }
 
+    /**
+     * 解析JOSN配置信息
+     *
+     * @param names
+     * @param uri
+     * @return
+     * @throws IOException
+     */
     private static Map<String, String> parseJsonSchema(List<String> names, String uri)
-        throws IOException {
+            throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
         mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
@@ -191,7 +228,7 @@ public class JdbcPipeline extends AbstractPipeline {
         JsonRoot root;
         if (uri.startsWith("inline:")) {
             root = mapper.readValue(
-                uri.substring("inline:".length()), JsonRoot.class);
+                    uri.substring("inline:".length()), JsonRoot.class);
         } else {
             root = mapper.readValue(new File(uri), JsonRoot.class);
         }
@@ -203,6 +240,7 @@ public class JdbcPipeline extends AbstractPipeline {
     }
 
     /**
+     * 根据配置信息创建CSV连接
      * Create a simple csv connection for execute non-table query.
      *
      * @return the csv connection
@@ -210,8 +248,8 @@ public class JdbcPipeline extends AbstractPipeline {
      */
     public static Connection createCsvConnection(String json) throws SQLException {
         ConnectionFactory connectionFactory = new MapConnectionFactory(
-            ImmutableMap.of("unquotedCasing", "unchanged", "caseSensitive", "true"),
-            ImmutableList.of()
+                ImmutableMap.of("unquotedCasing", "unchanged", "caseSensitive", "true"),
+                ImmutableList.of()
         ).with("model", json);
 
         // Properties info = new Properties();
@@ -221,15 +259,25 @@ public class JdbcPipeline extends AbstractPipeline {
         return connection;
     }
 
+    /**
+     * 使用默认信息创建CSV连接信息
+     *
+     * @return
+     * @throws SQLException
+     */
     public static Connection createCsvConnection() throws SQLException {
         return createCsvConnection(CSV_DEFAULT_SCHEMA);
     }
 
+    /**
+     * 执行查询
+     */
     @Override
     public void run() {
         QueryProcedure next = procedure.next();
         ResultSet resultSet = establishStatement();
 
+        //TODO 学习源码是如何转换的
         //TODO add jdbc sql translate
         if (next.hasNext() && next.next() instanceof DiskLoadProcedure) {
             String path = ((DiskLoadProcedure) next).path;
@@ -240,44 +288,48 @@ public class JdbcPipeline extends AbstractPipeline {
                 deliminator = " ";
             }
             new JdbcPipelineResult.TextPipelineResult(
-                new JdbcResultSetIterator<>(resultSet), path, deliminator).run();
+                    new JdbcResultSetIterator<>(resultSet), path, deliminator).run();
         } else {
             new JdbcPipelineResult.ShowPipelineResult(
-                new JdbcResultSetIterator<>(resultSet)).run();
+                    new JdbcResultSetIterator<>(resultSet)).run();
         }
     }
 
+    /**
+     * 展示查询结果
+     *
+     * @return
+     */
     @Override
     public PipelineResult show() {
         ResultSet resultSet = establishStatement();
-        return new JdbcPipelineResult.ShowPipelineResult(
-            new JdbcResultSetIterator<>(resultSet));
+        return new JdbcPipelineResult.ShowPipelineResult(new JdbcResultSetIterator<>(resultSet));
     }
 
     @Override
     public PipelineResult asTextFile(String clusterPath, String deliminator) {
         ResultSet resultSet = establishStatement();
         return new JdbcPipelineResult.TextPipelineResult(
-            new JdbcResultSetIterator<>(resultSet),
-            clusterPath, deliminator);
+                new JdbcResultSetIterator<>(resultSet),
+                clusterPath, deliminator);
     }
 
     @Override
     public PipelineResult asJsonFile(String clusterPath) {
         ResultSet resultSet = establishStatement();
         return new JdbcPipelineResult.JsonPipelineResult(
-            new JdbcResultSetIterator<>(resultSet),
-            clusterPath);
+                new JdbcResultSetIterator<>(resultSet),
+                clusterPath);
     }
 
     @Override
     public AbstractPipeline asTempTable(String tempTableName) {
         assert (procedure instanceof PreparedExtractProcedure.MySqlExtractor)
-            : "Only support MySQL as temporary table";
+                : "Only support MySQL as temporary table";
 
         try {
             statement.execute("CREATE TEMPORARY TABLE " + tempTableName
-                + " AS " + ((ExtractProcedure) procedure).toRecognizedQuery());
+                    + " AS " + ((ExtractProcedure) procedure).toRecognizedQuery());
         } catch (SQLException ex) {
             throw new RuntimeException(ex);
         }
@@ -300,6 +352,11 @@ public class JdbcPipeline extends AbstractPipeline {
 
     }
 
+    /**
+     * 建立数据库连接，获取Statement并执行SQL，返回ResultSet
+     *
+     * @return
+     */
     private ResultSet establishStatement() {
         String sql;
         if (procedure instanceof PreparedExtractProcedure.ElasticsearchExtractor) {
@@ -311,24 +368,25 @@ public class JdbcPipeline extends AbstractPipeline {
         LOGGER.debug("Query sentence which is unparsed from logical plan is: \n\t{}", sql);
 
         try {
+            //获取数据连接
             connection = getConnection();
 
             if (connection instanceof CalciteConnection) {
                 CalciteConnection calciteConnection = (CalciteConnection) connection;
 
                 calciteConnection.getProperties().setProperty(
-                    CalciteConnectionProperty.MATERIALIZATIONS_ENABLED.camelName(),
-                    Boolean.toString(false));
+                        CalciteConnectionProperty.MATERIALIZATIONS_ENABLED.camelName(),
+                        Boolean.toString(false));
 
                 calciteConnection.getProperties().setProperty(
-                    CalciteConnectionProperty.CREATE_MATERIALIZATIONS.camelName(),
-                    Boolean.toString(false));
+                        CalciteConnectionProperty.CREATE_MATERIALIZATIONS.camelName(),
+                        Boolean.toString(false));
 
-                if (! calciteConnection.getProperties().containsKey(
-                    CalciteConnectionProperty.TIME_ZONE.camelName())) {
+                if (!calciteConnection.getProperties().containsKey(
+                        CalciteConnectionProperty.TIME_ZONE.camelName())) {
                     calciteConnection.getProperties().setProperty(
-                        CalciteConnectionProperty.TIME_ZONE.camelName(),
-                        DateTimeUtils.UTC_ZONE.getID());
+                            CalciteConnectionProperty.TIME_ZONE.camelName(),
+                            DateTimeUtils.UTC_ZONE.getID());
                 }
             }
 
@@ -351,6 +409,11 @@ public class JdbcPipeline extends AbstractPipeline {
         }
     }
 
+    /**
+     * 获取connection
+     *
+     * @return
+     */
     private Connection getConnection() {
 
         if (tableNames.isEmpty()) {
@@ -369,15 +432,24 @@ public class JdbcPipeline extends AbstractPipeline {
         }
     }
 
+    /**
+     * 使用JDBC连接的数据源类型
+     */
     enum JdbcType {
         ELASTICSEARCH, JDBC, CSV
     }
 
+    /**
+     * Connection请求处理接口
+     */
     public interface ConnectionPostProcessor {
 
         Connection apply(Connection connection) throws SQLException;
     }
 
+    /**
+     * Connection的抽象工厂类
+     */
     private abstract static class ConnectionFactory {
 
         public abstract Connection createConnection() throws SQLException;
@@ -396,8 +468,13 @@ public class JdbcPipeline extends AbstractPipeline {
         private final ImmutableMap<String, String> map;
         private final ImmutableList<ConnectionPostProcessor> postProcessors;
 
-        private MapConnectionFactory(ImmutableMap<String, String> map,
-            ImmutableList<ConnectionPostProcessor> postProcessors) {
+        /**
+         * 工厂类
+         *
+         * @param map
+         * @param postProcessors
+         */
+        private MapConnectionFactory(ImmutableMap<String, String> map, ImmutableList<ConnectionPostProcessor> postProcessors) {
             this.map = Preconditions.checkNotNull(map);
             this.postProcessors = Preconditions.checkNotNull(postProcessors);
         }
@@ -420,7 +497,7 @@ public class JdbcPipeline extends AbstractPipeline {
         @Override
         public ConnectionFactory with(String property, Object value) {
             return new MapConnectionFactory(
-                FlatLists.append(this.map, property, value.toString()), postProcessors);
+                    FlatLists.append(this.map, property, value.toString()), postProcessors);
         }
 
         @Override
@@ -432,6 +509,9 @@ public class JdbcPipeline extends AbstractPipeline {
         }
     }
 
+    /**
+     * JSON迭代器
+     */
     //TODO modify jdbc to read from calcite jdbc connection, rather than to read from schema
     public static class JsonVisitor {
 
@@ -454,19 +534,19 @@ public class JdbcPipeline extends AbstractPipeline {
                     break;
                 case JDBC:
                     connectionInfo =
-                        jdbcProps.stream().reduce((left, right) -> {
-                            String leftUrl = left.getOrDefault("jdbcUrl", "");
-                            String rightUrl = right.getOrDefault("jdbcUrl", "");
+                            jdbcProps.stream().reduce((left, right) -> {
+                                String leftUrl = left.getOrDefault("jdbcUrl", "");
+                                String rightUrl = right.getOrDefault("jdbcUrl", "");
 
-                            if (leftUrl.substring(0, leftUrl.lastIndexOf("/")).equals(
-                                rightUrl.substring(0, rightUrl.lastIndexOf("/")))) {
-                                return left;
-                            } else {
-                                return Collections.emptyMap();
-                            }
-                        }).orElseThrow(() -> new RuntimeException(
-                            "Not find any schema info for given table names in "
-                                + "sql"));
+                                if (leftUrl.substring(0, leftUrl.lastIndexOf("/")).equals(
+                                        rightUrl.substring(0, rightUrl.lastIndexOf("/")))) {
+                                    return left;
+                                } else {
+                                    return Collections.emptyMap();
+                                }
+                            }).orElseThrow(() -> new RuntimeException(
+                                    "Not find any schema info for given table names in "
+                                            + "sql"));
 
                     connectionInfo.put("type", "jdbc");
                     break;
@@ -495,13 +575,13 @@ public class JdbcPipeline extends AbstractPipeline {
             for (JsonTable table : tables) {
                 Map<String, Object> map = ((JsonCustomTable) table).operand;
                 Map<String, String> operand = map.entrySet().stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
                 tableNames.put(((JsonCustomTable) table).name, operand);
                 tableNames.put(schema.name + "." + ((JsonCustomTable) table).name, operand);
             }
 
             for (String part : names) {
-                if (! tableNames.containsKey(part)) {
+                if (!tableNames.containsKey(part)) {
                     break;
                 }
                 jdbcProps.add(tableNames.get(part));

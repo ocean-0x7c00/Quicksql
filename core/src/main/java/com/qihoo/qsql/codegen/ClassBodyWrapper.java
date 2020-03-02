@@ -57,9 +57,7 @@ public abstract class ClassBodyWrapper {
      * @throws InMemoryCompiler.CompilerException When some error occurred, compilerException will be throw
      * @throws ClassNotFoundException When class is not found in jvm, a exception will be throw
      */
-    public static Class compileSourceAndLoadClass(String source, String name, String extraJars)
-        throws InMemoryCompiler.CompilerException,
-        ClassNotFoundException {
+    public static Class compileSourceAndLoadClass(String source, String name, String extraJars) throws InMemoryCompiler.CompilerException, ClassNotFoundException {
         WithClassPathInMemoryCompiler compiler = new WithClassPathInMemoryCompiler();
         CompilationPackage compilationPackage = compiler.singleCompile(name, source, extraJars);
         CompilationPackageLoader loader = new CompilationPackageLoader();

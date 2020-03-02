@@ -83,6 +83,7 @@ public class QueryProcedureProducer {
     /**
      * parse, validate, optimize, separate sql, and get query procedure.
      *
+     * 解析，校验，优化，分类SQL，获得查询计划
      * @param sql sql
      * @return QueryProcedure
      */
