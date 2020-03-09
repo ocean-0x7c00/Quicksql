@@ -92,8 +92,7 @@ public class DynamicSqlRunner extends SqlRunner {
      */
     public AbstractPipeline chooseAdaptPipeline(QueryProcedure procedure) {
         //is single engine
-        if (procedure instanceof DirectQueryProcedure
-            && (environment.isDefaultMode() || environment.isJdbcMode())) {
+        if (procedure instanceof DirectQueryProcedure && (environment.isDefaultMode() || environment.isJdbcMode())) {
             ExtractProcedure extractProcedure = (ExtractProcedure) procedure.next();
 
             LOGGER.debug("Choose specific runner {} to execute query",

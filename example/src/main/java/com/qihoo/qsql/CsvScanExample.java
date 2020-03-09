@@ -13,7 +13,7 @@ public class CsvScanExample {
      * @param args nothing
      */
     public static void main(String[] args) throws IOException {
-        RuntimeEnv.init();
+//        RuntimeEnv.init();
 //        String sql = "select * from depts";
         String sql = "select * from COLUMNS";
 //        SqlRunner.Builder.RunnerType runnerType = RunnerType.value(args.length < 1 ? "spark" : args[0]);
