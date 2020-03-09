@@ -14,11 +14,13 @@ public class CsvScanExample {
      */
     public static void main(String[] args) throws IOException {
         RuntimeEnv.init();
-        String sql = "select * from depts";
-        SqlRunner.Builder.RunnerType runnerType = RunnerType.value(args.length < 1 ? "spark" : args[0]);
+//        String sql = "select * from depts";
+        String sql = "select * from COLUMNS";
+//        SqlRunner.Builder.RunnerType runnerType = RunnerType.value(args.length < 1 ? "spark" : args[0]);
+        SqlRunner.Builder.RunnerType runnerType = RunnerType.JDBC;
         SqlRunner runner = SqlRunner.builder()
             .setTransformRunner(runnerType)
-            .setSchemaPath(RuntimeEnv.metadata)
+            .setSchemaPath(RuntimeEnv.metaDataSQLIET)
             .setAppName("test_csv_app")
             .setAcceptedResultsNum(100)
             .ok();

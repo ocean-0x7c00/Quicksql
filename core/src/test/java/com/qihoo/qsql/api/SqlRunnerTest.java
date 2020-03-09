@@ -1,6 +1,7 @@
 package com.qihoo.qsql.api;
 
 import com.qihoo.qsql.api.SqlRunner.Builder.RunnerType;
+import com.qihoo.qsql.exec.AbstractPipeline;
 import com.qihoo.qsql.exec.JdbcPipeline;
 import com.qihoo.qsql.exec.flink.FlinkPipeline;
 import com.qihoo.qsql.exec.spark.SparkPipeline;
@@ -19,13 +20,19 @@ public class SqlRunnerTest {
 
     @Test
     public void testSingleQueryForMySql() {
-        String sql = "SELECT dep_id FROM edu_manage.department";
-        Assert.assertEquals(buildDynamicSqlRunner().sql(sql).getClass(), JdbcPipeline.class);
+        String sql = "SELECT * FROM edu_manage.department_student_relation r inner join department d on d.id=r.id ";
+        SqlRunner.builder()
+                .setTransformRunner(SqlRunner.Builder.RunnerType.DEFAULT)
+                .setAppName("Test for DynamicSqlRunner")
+                .setAcceptedResultsNum(20)
+                .ok().sql(sql).show();
+
     }
 
     @Test
     public void testSingleQueryForElasticsearch() {
         String sql = "SELECT stu_id FROM student_profile.student";
+        buildDynamicSqlRunner().sql(sql).show();
         Assert.assertEquals(buildDynamicSqlRunner().sql(sql).getClass(), JdbcPipeline.class);
     }
 

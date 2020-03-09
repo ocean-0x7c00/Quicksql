@@ -204,8 +204,7 @@ public class JdbcPipeline extends AbstractPipeline {
     }
 
     //TODO add zeroDateTimeBehavior=convertToNull property
-    private static Connection createJdbcConnection(Map<String, String> conn)
-        throws ClassNotFoundException, SQLException {
+    private static Connection createJdbcConnection(Map<String, String> conn) throws ClassNotFoundException, SQLException {
         if (! conn.containsKey("jdbcDriver")) {
             throw new RuntimeException("The `jdbcDriver` property needed to be set.");
         }
