@@ -27,40 +27,44 @@ import java.util.Map;
 
 /**
  * Factory that creates a {@link CsvSchema}.
- *
+ * <p>
  * <p>Allows a custom schema to be included in a <code><i>model</i>.json</code>
  * file.
  */
 @SuppressWarnings("UnusedDeclaration")
 public class CsvSchemaFactory implements SchemaFactory {
-  /** Name of the column that is implicitly created in a CSV stream table
-   * to hold the data arrival time. */
-  static final String ROWTIME_COLUMN_NAME = "ROWTIME";
+    /**
+     * Name of the column that is implicitly created in a CSV stream table
+     * to hold the data arrival time.
+     */
+    static final String ROWTIME_COLUMN_NAME = "ROWTIME";
 
-  /** Public singleton, per factory contract. */
-  public static final CsvSchemaFactory INSTANCE = new CsvSchemaFactory();
+    /**
+     * Public singleton, per factory contract.
+     */
+    public static final CsvSchemaFactory INSTANCE = new CsvSchemaFactory();
 
-  private CsvSchemaFactory() {
-  }
-
-  public Schema create(SchemaPlus parentSchema, String name,
-                       Map<String, Object> operand) {
-    final String directory = (String) operand.get("directory");
-    final File base =
-        (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
-    File directoryFile = new File(directory);
-    if (base != null && !directoryFile.isAbsolute()) {
-      directoryFile = new File(base, directory);
+    private CsvSchemaFactory() {
     }
-    String flavorName = (String) operand.get("flavor");
-    CsvTable.Flavor flavor;
-    if (flavorName == null) {
-      flavor = CsvTable.Flavor.SCANNABLE;
-    } else {
-      flavor = CsvTable.Flavor.valueOf(flavorName.toUpperCase(Locale.ROOT));
+
+    @Override
+    public Schema create(SchemaPlus parentSchema, String name, Map<String, Object> operand) {
+        //从schema中取出operand对象，从operand中获取配置文件的位置
+        final String directory = (String) operand.get("directory");
+        final File base = (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
+        File directoryFile = new File(directory);
+        if (base != null && !directoryFile.isAbsolute()) {
+            directoryFile = new File(base, directory);
+        }
+        String flavorName = (String) operand.get("flavor");
+        CsvTable.Flavor flavor;
+        if (flavorName == null) {
+            flavor = CsvTable.Flavor.SCANNABLE;
+        } else {
+            flavor = CsvTable.Flavor.valueOf(flavorName.toUpperCase(Locale.ROOT));
+        }
+        return new CsvSchema(directoryFile, flavor);
     }
-    return new CsvSchema(directoryFile, flavor);
-  }
 }
 
 // End CsvSchemaFactory.java
