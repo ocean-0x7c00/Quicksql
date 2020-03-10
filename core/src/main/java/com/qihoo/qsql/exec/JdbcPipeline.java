@@ -430,8 +430,7 @@ public class JdbcPipeline extends AbstractPipeline {
         private final ImmutableMap<String, String> map;
         private final ImmutableList<ConnectionPostProcessor> postProcessors;
 
-        private MapConnectionFactory(ImmutableMap<String, String> map,
-            ImmutableList<ConnectionPostProcessor> postProcessors) {
+        private MapConnectionFactory(ImmutableMap<String, String> map, ImmutableList<ConnectionPostProcessor> postProcessors) {
             this.map = Preconditions.checkNotNull(map);
             this.postProcessors = Preconditions.checkNotNull(postProcessors);
         }
